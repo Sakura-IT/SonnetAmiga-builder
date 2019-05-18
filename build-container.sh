@@ -1,15 +1,21 @@
 #!/bin/bash
 
-FEDORA_RELEASE=29
+FEDORA_RELEASE=30
+FEDORA_IMAGE=registry.fedoraproject.org/fedora-minimal:${FEDORA_RELEASE}
+
 TOOLCHAIN_ARCHIVE=sonnet-toolchain-20190404.tar.gz
 TOOLCHAIN_URL=http://assets.sakura-it.pl/binaries/${TOOLCHAIN_ARCHIVE}
 
-container=$(buildah from fedora:${FEDORA_RELEASE})
+container=$(buildah from ${FEDORA_IMAGE})
+DNF_TOOL=microdnf
 
-buildah run $container -- dnf -y install https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-${FEDORA_RELEASE}.noarch.rpm https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${FEDORA_RELEASE}.noarch.rpm
+RPMFUSION_RPMS="https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-${FEDORA_RELEASE}.noarch.rpm https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${FEDORA_RELEASE}.noarch.rpm"
 
-buildah run $container -- dnf -y install make lha
-buildah run $container -- dnf clean all
+buildah copy $container ${RPMFUSION_RPMS} /root/
+buildah run $container -- rpm -ivh /root/*rpm
+
+buildah run $container -- $DNF_TOOL -y install make lha tar
+buildah run $container -- $DNF_TOOL clean all
 
 buildah add $container ${TOOLCHAIN_URL} /opt/
 
